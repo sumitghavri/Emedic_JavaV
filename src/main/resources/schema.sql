@@ -3,6 +3,5 @@ CREATE TABLE IF NOT EXISTS clinic_workspace (
     name VARCHAR(255) NOT NULL,
     address VARCHAR(1000),
     phone VARCHAR(64),
-    email VARCHAR(255),
-    website VARCHAR(255)
+    email VARCHAR(255)
 );

@@ -53,6 +53,7 @@ function Workspace() {
   const [mobileNav, setMobileNav] = useState(false)
   const [toast, setToast] = useState('')
   const [helpOpen, setHelpOpen] = useState(false)
+  const [clinicName, setClinicName] = useState('Clinic workspace')
   const roles = useMemo(() => {
     const raw = user?.[rolesClaim]
     return Array.isArray(raw) ? raw as string[] : []
@@ -80,6 +81,14 @@ function Workspace() {
     const timer = window.setTimeout(() => setToast(''), 3600)
     return () => window.clearTimeout(timer)
   }, [toast])
+
+  useEffect(() => {
+    let live = true
+    getApiToken().then(token => token ? api<ClinicWorkspace>('/clinic-workspace', token) : null)
+      .then(workspace => { if (live && workspace?.name) setClinicName(workspace.name) })
+      .catch(() => {})
+    return () => { live = false }
+  }, [])
 
   if (isLoading) return <div className="screen-state"><div className="spinner" /><span>Preparing your workspace…</span></div>
   if (!isAuthenticated) return <main className="login-screen">
@@ -118,7 +127,7 @@ function Workspace() {
   return <div className="app-shell">
     <aside className={`sidebar ${mobileNav ? 'sidebar-open' : ''}`}>
       <div className="sidebar-brand"><div className="brand-mark"><HeartPulse size={20} /></div><div><b>emedic</b><span>CARE OPERATIONS</span></div><button className="icon-button mobile-close" onClick={() => setMobileNav(false)} aria-label="Close navigation"><X size={18} /></button></div>
-      <div className="workspace-switch"><div className="workspace-avatar">N</div><div className="workspace-name"><b>Northstar Clinic</b><span>Clinical workspace</span></div></div>
+      <div className="workspace-switch"><div className="workspace-avatar">{clinicName.trim().charAt(0).toUpperCase() || 'C'}</div><div className="workspace-name"><b>{clinicName}</b><span>Clinical workspace</span></div></div>
       <div className="nav-label">WORKSPACE</div>
       <nav className="main-nav" aria-label="Main navigation">
         {nav.filter(item => item.visible).map(item => {
@@ -140,7 +149,7 @@ function Workspace() {
         {section === 'Medicines' && (canClinical || allowed('RECEPTIONIST')) && <MedicineCatalogPage token={getApiToken} canManage={canManageMedicines} />}
         {section === 'Doctors' && (canManageDoctors || canRegisterAsDoctor) && <DoctorsPage token={getApiToken} canManage={canManageDoctors} clinicianIdentity={{ email: user?.email ?? '', name: user?.name ?? '' }} />}
         {section === 'Schedules' && canSchedule && <SchedulesPage token={getApiToken} onNavigate={setSection} />}
-        {section === 'Clinic workspace' && canSchedule && <ClinicWorkspacePage token={getApiToken} />}
+        {section === 'Clinic workspace' && canSchedule && <ClinicWorkspacePage token={getApiToken} onNameChange={setClinicName} />}
       </main>
       <footer className="main-footer"><span>eMedic is a care coordination tool. Clinical decisions remain with the treating clinician.</span><span><ShieldCheck size={14} /> Secure session</span></footer>
     </div>
@@ -529,10 +538,10 @@ function SchedulesPage({ token, onNavigate }: { token: TokenGetter; onNavigate: 
   </>
 }
 
-type ClinicWorkspace = { name: string; address: string; phone: string; email: string; website: string }
-function ClinicWorkspacePage({ token }: { token: TokenGetter }) {
+type ClinicWorkspace = { name: string; address: string; phone: string; email: string }
+function ClinicWorkspacePage({ token, onNameChange }: { token: TokenGetter; onNameChange: (name: string) => void }) {
   const request = useTokenApi(token)
-  const [clinic, setClinic] = useState<ClinicWorkspace>({ name: '', address: '', phone: '', email: '', website: '' })
+  const [clinic, setClinic] = useState<ClinicWorkspace>({ name: '', address: '', phone: '', email: '' })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -540,7 +549,7 @@ function ClinicWorkspacePage({ token }: { token: TokenGetter }) {
   useEffect(() => { request<ClinicWorkspace>('/clinic-workspace').then(setClinic).catch(e => setError(e.message)).finally(() => setLoading(false)) }, [])
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setSaving(true); setError(''); setSaved(false)
-    try { setClinic(await request<ClinicWorkspace>('/clinic-workspace', { method: 'PUT', body: JSON.stringify(clinic) })); setSaved(true) }
+    try { const updated = await request<ClinicWorkspace>('/clinic-workspace', { method: 'PUT', body: JSON.stringify(clinic) }); setClinic(updated); onNameChange(updated.name); setSaved(true) }
     catch (e) { setError((e as Error).message) } finally { setSaving(false) }
   }
   if (loading) return <LoadingRows />
@@ -549,7 +558,6 @@ function ClinicWorkspacePage({ token }: { token: TokenGetter }) {
       <label className="span-2">Clinic name<input required value={clinic.name} onChange={e => setClinic({ ...clinic, name: e.target.value })} /></label>
       <label className="span-2">Address<input value={clinic.address ?? ''} onChange={e => setClinic({ ...clinic, address: e.target.value })} /></label>
       <label>Phone<input value={clinic.phone ?? ''} onChange={e => setClinic({ ...clinic, phone: e.target.value })} /></label><label>Email<input type="email" value={clinic.email ?? ''} onChange={e => setClinic({ ...clinic, email: e.target.value })} /></label>
-      <label className="span-2">Website<input type="url" value={clinic.website ?? ''} onChange={e => setClinic({ ...clinic, website: e.target.value })} /></label>
       <div className="form-foot span-2"><span>Only clinic administrators can edit this profile.</span><button className="button button-primary" disabled={saving}>{saving ? 'Saving…' : 'Save clinic profile'}</button></div>
     </form>
   </section>

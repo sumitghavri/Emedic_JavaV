@@ -11,5 +11,4 @@ public class ClinicWorkspace {
     private String address;
     private String phone;
     private String email;
-    private String website;
 }

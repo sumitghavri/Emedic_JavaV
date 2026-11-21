@@ -13,7 +13,7 @@ public class ClinicWorkspaceController {
         ClinicWorkspace workspace = repository.findById(1L).orElseGet(ClinicWorkspace::new);
         if (update.getName() == null || update.getName().isBlank()) throw new IllegalArgumentException("Clinic name is required");
         workspace.setId(1L); workspace.setName(update.getName().trim()); workspace.setAddress(update.getAddress());
-        workspace.setPhone(update.getPhone()); workspace.setEmail(update.getEmail()); workspace.setWebsite(update.getWebsite());
+        workspace.setPhone(update.getPhone()); workspace.setEmail(update.getEmail());
         return repository.save(workspace);
     }
 }
